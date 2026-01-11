@@ -11,10 +11,8 @@ app.secret_key = os.getenv("SECRET_KEY", "dev-secret-key")
 
 DB_NAME = "shop.db"
 
-# 🔐 Пароль админки (можешь поменять)
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "1234")
 
-# ✅ Все товары (14 мл) — твой актуальный список
 def get_db():
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
@@ -36,13 +34,11 @@ def init_db():
     db.close()
 
 
-# ВАЖНО: создаём таблицу при старте (на Render база пустая)
+
 init_db()
 
 
-# =========================
-# Helpers
-# =========================
+
 def money_kzt(n: int) -> str:
     return f"{n:,}".replace(",", " ") + " ₸"
 
@@ -117,9 +113,7 @@ PERFUMES = [
 ]
 
 
-# =========================
-# DB
-# =========================
+
 def get_db():
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
@@ -143,9 +137,7 @@ def init_db():
     db.close()
 
 
-# =========================
-# helpers
-# =========================
+
 def money_kzt(n: int) -> str:
     return f"{n:,}".replace(",", " ") + " ₸"
 
@@ -194,9 +186,7 @@ def build_cart_items(cart: dict):
     return items, total
 
 
-# =========================
-# admin auth
-# =========================
+
 def admin_required(view_func):
     @wraps(view_func)
     def wrapper(*args, **kwargs):
@@ -226,9 +216,6 @@ def admin_logout():
     return redirect(url_for("home"))
 
 
-# =========================
-# routes
-# =========================
 @app.get("/")
 def home():
     cart = get_cart()
@@ -317,9 +304,9 @@ def order_page():
 
 @app.post("/checkout")
 def checkout():
-    customer = request.form.get("customer", "").strip()
-    phone = request.form.get("phone", "").strip()
-    address = request.form.get("address", "").strip()
+    customer = (request.form.get("customer") or request.form.get("name") or "Без имени").strip()
+    phone = (request.form.get("phone") or "").strip()
+    address = (request.form.get("address") or "").strip()
 
     cart = get_cart()
     items, total = build_cart_items(cart)
@@ -327,7 +314,7 @@ def checkout():
     if not items:
         return redirect(url_for("cart_page"))
 
-    if not customer or not phone or not address:
+    if not phone or not address:
         return "Заполни все поля 😅", 400
 
     items_for_db = [
@@ -335,16 +322,27 @@ def checkout():
         for it in items
     ]
 
+    created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
     db = get_db()
     cur = db.cursor()
-    created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     cur.execute(
-        "INSERT INTO orders (customer, phone, address, items, total, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-        (customer, phone, address, json.dumps(items_for_db, ensure_ascii=False), total, created_at)
+        "INSERT INTO orders (customer, items, total, created_at) VALUES (?, ?, ?, ?)",
+        (
+            f"{customer} | {phone} | {address}",
+            json.dumps(items_for_db, ensure_ascii=False),
+            total,
+            created_at
+        )
     )
     db.commit()
     order_id = cur.lastrowid
     db.close()
+
+    session.pop("cart", None)
+
+    return render_template("success.html", order_id=order_id)
+
 
     session.pop("cart", None)
 
