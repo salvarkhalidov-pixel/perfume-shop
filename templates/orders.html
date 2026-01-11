@@ -42,10 +42,10 @@
           <hr style="border:none;border-top:1px dashed #eee;margin:12px 0;">
 
           <ul style="margin:0; padding-left:18px;">
-            {% for it in o.items %}
+            {% for it in o["order_items"] %}
               <li>
-                {{ it.name }} — {{ it.qty }} × {{ it.price }} ₸
-                <span class="muted">(итого: {{ it.line_total }} ₸)</span>
+                {{ it["name"] }} — {{ it["qty"] }} × {{ it["price"] }} ₸
+                <span class="muted">(итого: {{ it["line_total"] }} ₸)</span>
               </li>
             {% endfor %}
           </ul>
