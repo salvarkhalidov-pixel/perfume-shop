@@ -15,26 +15,105 @@ DB_NAME = "shop.db"
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "1234")
 
 # ✅ Все товары (14 мл) — твой актуальный список
+def get_db():
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def init_db():
+    db = get_db()
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            customer TEXT NOT NULL,
+            items TEXT NOT NULL,
+            total INTEGER NOT NULL,
+            created_at TEXT NOT NULL
+        )
+    """)
+    db.commit()
+    db.close()
+
+
+# ВАЖНО: создаём таблицу при старте (на Render база пустая)
+init_db()
+
+
+# =========================
+# Helpers
+# =========================
+def money_kzt(n: int) -> str:
+    return f"{n:,}".replace(",", " ") + " ₸"
+
+
+def get_cart() -> dict:
+    return session.get("cart", {})
+
+
+def save_cart(cart: dict):
+    session["cart"] = cart
+
+
+def cart_count(cart: dict) -> int:
+    return sum(cart.values())
+
+
+def get_perfume_by_id(pid: str):
+    for p in PERFUMES:
+        if p["id"] == pid:
+            return p
+    return None
+
+
+def build_cart_items(cart: dict):
+    items = []
+    total = 0
+    for pid, qty in cart.items():
+        p = get_perfume_by_id(pid)
+        if not p:
+            continue
+
+        line_total = p["price"] * qty
+        total += line_total
+
+        items.append({
+            "id": pid,
+            "name": p["name"],
+            "volume": p.get("volume", "14 мл"),
+            "price": p["price"],
+            "price_str": money_kzt(p["price"]),
+            "qty": qty,
+            "line_total": line_total,
+            "line_total_str": money_kzt(line_total),
+        })
+    return items, total
+
+
+def admin_required():
+    if not session.get("is_admin"):
+        return False
+    return True
 PERFUMES = [
-    {"id": "molecule_02", "name": "Molecule 02, 14 мл", "price": 7500},
-    {"id": "bvlgari_tygar", "name": "Bvlgari Tygar, 14 мл", "price": 9000},
-    {"id": "antonio_banderas", "name": "Antonio Banderas, 14 мл", "price": 7000},
-    {"id": "oud_maracuja", "name": "Oud Maracuja, 14 мл", "price": 9500},
-    {"id": "armani_stronger_absolutely", "name": "Armani Stronger With You Absolutely, 14 мл", "price": 8500},
-    {"id": "armani_my_way", "name": "Armani My Way, 14 мл", "price": 6500},
-    {"id": "givenchy_ange_demon", "name": "Givenchy Ange ou Démon, 14 мл", "price": 7000},
+    {"id": "molecule_02", "name": "Molecule 02 ", "price": 7500, "volume": "14мл"},
+    # {"id": "bvlgari_tygar", "name": "Bvlgari Tygar ", "price": 9000, "volume": "14мл"},
+    {"id": "antonio_banderas", "name": "Antonio Banderas ", "price": 7000, "volume": "14мл"},
+    {"id": "oud_maracuja", "name": "Oud Maracuja ", "price": 9500, "volume": "14мл"},
+    {"id": "armani_stronger_absolutely", "name": "Armani Stronger With You Absolutely ", "price": 8500, "volume": "14мл"},
+    {"id": "armani_my_way", "name": "Armani My Way ", "price": 6500, "volume": "14мл"},
+    {"id": "givenchy_ange_demon", "name": "Givenchy Ange ou Démon ", "price": 7000, "volume": "14мл"},
 
-    {"id": "vs", "name": "Victoria's Secret Bombshell, 14 мл", "price": 8700},
-    {"id": "versace_bc", "name": "Versace Bright Crystal, 14 мл", "price": 7790},
-    {"id": "megamare", "name": "Orto Parisi Megamare, 14 мл", "price": 10990},
-    {"id": "sauvage", "name": "Dior Sauvage, 14 мл", "price": 13990},
+    {"id": "vs", "name": "Victoria's Secret Bombshell ", "price": 8700, "volume": "14мл"},
+    {"id": "versace_bc", "name": "Versace Bright Crystal ", "price": 7790, "volume": "14мл"},
+    {"id": "megamare", "name": "Orto Parisi Megamare ", "price": 10990, "volume": "14мл"},
+    {"id": "sauvage", "name": "Dior Sauvage ", "price": 13990, "volume": "14мл"},
 
-    {"id": "chanel_5", "name": "Chanel No.5, 14 мл", "price": 15990},
-    {"id": "bleu_chanel", "name": "Bleu de Chanel, 14 мл", "price": 14990},
-    {"id": "black_opium", "name": "YSL Black Opium, 14 мл", "price": 13490},
-    {"id": "lacoste_pour_femme", "name": "Lacoste Pour Femme, 14 мл", "price": 9990},
-    {"id": "armani_si", "name": "Giorgio Armani Si, 14 мл", "price": 14490},
-    {"id": "lanvin_eclat", "name": "Lanvin Éclat d'Arpège, 14 мл", "price": 10490},
+    {"id": "chanel_5", "name": "Chanel No.5 ", "price": 15990, "volume": "14мл"},
+    {"id": "bleu_chanel", "name": "Bleu de Chanel ", "price": 14990, "volume": "14мл"},
+    {"id": "black_opium", "name": "YSL Black Opium", "price": 13490, "volume": "14мл"},
+    {"id": "lacoste_pour_femme", "name": "Lacoste Pour Femme ", "price": 9990, "volume": "14мл"},
+    {"id": "armani_si", "name": "Giorgio Armani Si ", "price": 14490, "volume": "14мл"},
+    {"id": "lanvin_eclat", "name": "Lanvin Éclat d'Arpège ", "price": 10490, "volume": "14мл"},
 ]
 
 
