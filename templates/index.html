@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Xan Perfume</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 18px; }
+    .top { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .badge { padding:6px 10px; border-radius:999px; background:#111; color:#fff; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin-top:14px; }
+    .card { border:1px solid #ddd; border-radius:16px; padding:12px; }
+    button { padding:10px 12px; border:none; border-radius:12px; background:#111; color:#fff; cursor:pointer; }
+    a { color:#111; text-decoration:none; }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <h1 style="margin:0;">🛍️ Xan Perfume</h1>
+    <div class="badge">🛒 {{ cart_count }}</div>
+  </div>
+
+  <div style="margin-top:10px;">
+    <a href="/cart">Перейти в корзину →</a>
+  </div>
+
+  <div class="grid">
+    {% for p in perfumes %}
+      <div class="card">
+        <b>{{ p.name }}</b>
+        <div style="margin-top:6px;">Цена: <b>{{ money_kzt(p.price) }}</b></div>
+
+        <form method="POST" action="/add-to-cart" style="margin-top:10px;">
+          <input type="hidden" name="perfume_id" value="{{ p.id }}">
+          <button type="submit">➕ Добавить</button>
+        </form>
+      </div>
+    {% endfor %}
+  </div>
+</body>
+</html>

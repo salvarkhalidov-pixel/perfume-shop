@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Заказы</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 18px; }
+    .wrap { max-width: 980px; margin: 0 auto; }
+    .top { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .badge { padding:6px 10px; border-radius:999px; background:#111; color:#fff; font-size:14px; }
+    .card { border:1px solid #ddd; border-radius:16px; padding:14px; margin-top:12px; }
+    .muted { color:#666; }
+    a { color:#111; text-decoration:none; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <h1 style="margin:0;">📦 Заказы</h1>
+      <div class="badge">🛒 {{ cart_count }}</div>
+    </div>
+
+    <div style="margin-top:10px;">
+      <a href="/">← В магазин</a>
+    </div>
+
+    {% if orders and orders|length > 0 %}
+      {% for o in orders %}
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; gap:12px;">
+            <div>
+              <b>Заказ #{{ o.id }}</b>
+              <div class="muted">{{ o.created_at }}</div>
+              <div>👤 <b>{{ o.customer }}</b></div>
+              <div class="muted">📞 {{ o.phone }}</div>
+              <div class="muted">📍 {{ o.address }}</div>
+            </div>
+            <div style="font-size:16px;"><b>{{ o.total_str }}</b></div>
+          </div>
+
+          <hr style="border:none;border-top:1px dashed #eee;margin:12px 0;">
+
+          <ul style="margin:0; padding-left:18px;">
+            {% for it in o.items %}
+              <li>
+                {{ it.name }} — {{ it.qty }} × {{ it.price }} ₸
+                <span class="muted">(итого: {{ it.line_total }} ₸)</span>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="card">
+        <p style="margin:0;">Пока заказов нет 😅</p>
+      </div>
+    {% endif %}
+  </div>
+</body>
+</html>

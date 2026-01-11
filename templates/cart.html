@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Корзина</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 18px; }
+    .badge { padding:6px 10px; border-radius:999px; background:#111; color:#fff; }
+    .row { border:1px solid #ddd; border-radius:16px; padding:12px; margin-top:10px; }
+    button { padding:8px 10px; border:none; border-radius:10px; background:#111; color:#fff; cursor:pointer; }
+    a { color:#111; text-decoration:none; }
+    .line { display:flex; justify-content:space-between; gap:10px; align-items:center; }
+  </style>
+</head>
+<body>
+
+  <div class="line">
+    <h1 style="margin:0;">🛒 Корзина</h1>
+    <div class="badge">{{ cart_count }}</div>
+  </div>
+
+  <div style="margin-top:10px;">
+    <a href="/">← В магазин</a>
+  </div>
+
+  {% if items and items|length > 0 %}
+    {% for it in items %}
+      <div class="row">
+        <b>{{ it.name }}</b><br>
+        {{ it.price_str }} × {{ it.qty }} = <b>{{ it.line_total_str }}</b>
+
+        <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+          <form method="POST" action="/cart/inc">
+            <input type="hidden" name="pid" value="{{ it.id }}">
+            <button type="submit">＋</button>
+          </form>
+
+          <form method="POST" action="/cart/dec">
+            <input type="hidden" name="pid" value="{{ it.id }}">
+            <button type="submit">－</button>
+          </form>
+
+          <form method="POST" action="/cart/remove">
+            <input type="hidden" name="pid" value="{{ it.id }}">
+            <button type="submit">Удалить</button>
+          </form>
+        </div>
+      </div>
+    {% endfor %}
+
+    <h2 style="margin-top:14px;">Итого: {{ total_str }}</h2>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <a href="/order"><b>✅ Оформить заказ</b></a>
+
+      <form method="POST" action="/clear-cart">
+        <button type="submit">Очистить корзину</button>
+      </form>
+    </div>
+
+  {% else %}
+    <p>Корзина пустая 😅</p>
+  {% endif %}
+
+</body>
+</html>

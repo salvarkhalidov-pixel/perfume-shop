@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Оформление заказа</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 18px; }
+    .wrap { max-width: 900px; margin: 0 auto; }
+    .badge { padding:6px 10px; border-radius:999px; background:#111; color:#fff; }
+    .grid { display:grid; grid-template-columns: 1.2fr 0.8fr; gap:14px; margin-top:14px; }
+    .card { border:1px solid #ddd; border-radius:16px; padding:14px; }
+    .row { display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px dashed #eee; }
+    .row:last-child { border-bottom:none; }
+    .muted { color:#666; }
+    input { width:100%; padding:10px 12px; border:1px solid #ddd; border-radius:12px; outline:none; }
+    label { display:block; margin:10px 0 6px; font-size:14px; color:#333; }
+    .btn { width:100%; padding:12px; border:none; border-radius:12px; background:#111; color:#fff; font-size:16px; cursor:pointer; }
+    a { color:#111; text-decoration:none; }
+    @media (max-width: 860px){
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+      <h1 style="margin:0;">✅ Оформление заказа</h1>
+      <div class="badge">🛒 {{ cart_count }}</div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h2 style="margin:0 0 10px;">Товары</h2>
+
+        {% for it in items %}
+          <div class="row">
+            <div>
+              <b>{{ it.name }}</b><br>
+              <span class="muted">{{ it.price_str }} × {{ it.qty }}</span>
+            </div>
+            <div><b>{{ it.line_total_str }}</b></div>
+          </div>
+        {% endfor %}
+
+        <div style="display:flex; justify-content:space-between; margin-top:12px;">
+          <div class="muted">Итого</div>
+          <div style="font-size:18px;"><b>{{ total_str }}</b></div>
+        </div>
+
+        <div style="margin-top:10px;">
+          <a href="/cart">← Назад в корзину</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 style="margin:0 0 10px;">Контакты</h2>
+
+        <form action="/checkout" method="POST">
+          <label>Имя</label>
+          <input type="text" name="customer" placeholder="Ваше Имя" required>
+
+          <label>Телефон</label>
+          <input type="text" name="phone" placeholder="+7..." required>
+
+          <label>Адрес</label>
+          <input type="text" name="address" placeholder="Город, улица, дом" required>
+
+          <div style="margin-top:12px;">
+            <button class="btn" type="submit">✅ Подтвердить заказ</button>
+          </div>
+        </form>
+
+        <p class="muted" style="margin:10px 0 0;">
+          После подтверждения заказ сохранится, а корзина очистится.
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

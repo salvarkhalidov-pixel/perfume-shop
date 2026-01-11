@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Успешно ✅</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 18px; }
+    .box { max-width: 520px; margin: 0 auto; border: 1px solid #ddd; border-radius: 16px; padding: 16px; }
+    .btn { display:inline-block; margin-top: 12px; padding:10px 12px; border-radius:12px; background:#111; color:#fff; text-decoration:none; }
+    .muted { color:#666; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1 style="margin-top:0;">✅ Заказ оформлен!</h1>
+    <p class="muted">Мы скоро свяжемся с вами.</p>
+    <p><b>Номер заказа:</b> {{ order_id }}</p>
+
+    <a class="btn" href="/">🛍️ В магазин</a>
+    <a class="btn" href="/orders">📦 Заказы</a>
+  </div>
+</body>
+</html>

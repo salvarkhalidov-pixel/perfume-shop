@@ -1,0 +1,306 @@
+import os
+import sqlite3
+import json
+from datetime import datetime
+from functools import wraps
+
+from flask import Flask, render_template, request, session, redirect, url_for
+
+app = Flask(__name__)
+app.secret_key = os.getenv("SECRET_KEY", "dev-secret-key")
+
+DB_NAME = "shop.db"
+
+# 🔐 Пароль админки (можешь поменять)
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "1234")
+
+# ✅ Все товары (14 мл) — твой актуальный список
+PERFUMES = [
+    {"id": "molecule_02", "name": "Molecule 02, 14 мл", "price": 7500},
+    {"id": "bvlgari_tygar", "name": "Bvlgari Tygar, 14 мл", "price": 9000},
+    {"id": "antonio_banderas", "name": "Antonio Banderas, 14 мл", "price": 7000},
+    {"id": "oud_maracuja", "name": "Oud Maracuja, 14 мл", "price": 9500},
+    {"id": "armani_stronger_absolutely", "name": "Armani Stronger With You Absolutely, 14 мл", "price": 8500},
+    {"id": "armani_my_way", "name": "Armani My Way, 14 мл", "price": 6500},
+    {"id": "givenchy_ange_demon", "name": "Givenchy Ange ou Démon, 14 мл", "price": 7000},
+
+    {"id": "vs", "name": "Victoria's Secret Bombshell, 14 мл", "price": 8700},
+    {"id": "versace_bc", "name": "Versace Bright Crystal, 14 мл", "price": 7790},
+    {"id": "megamare", "name": "Orto Parisi Megamare, 14 мл", "price": 10990},
+    {"id": "sauvage", "name": "Dior Sauvage, 14 мл", "price": 13990},
+
+    {"id": "chanel_5", "name": "Chanel No.5, 14 мл", "price": 15990},
+    {"id": "bleu_chanel", "name": "Bleu de Chanel, 14 мл", "price": 14990},
+    {"id": "black_opium", "name": "YSL Black Opium, 14 мл", "price": 13490},
+    {"id": "lacoste_pour_femme", "name": "Lacoste Pour Femme, 14 мл", "price": 9990},
+    {"id": "armani_si", "name": "Giorgio Armani Si, 14 мл", "price": 14490},
+    {"id": "lanvin_eclat", "name": "Lanvin Éclat d'Arpège, 14 мл", "price": 10490},
+]
+
+
+# =========================
+# DB
+# =========================
+def get_db():
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def init_db():
+    db = get_db()
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            customer TEXT NOT NULL,
+            phone TEXT NOT NULL,
+            address TEXT NOT NULL,
+            items TEXT NOT NULL,
+            total INTEGER NOT NULL,
+            created_at TEXT NOT NULL
+        )
+    """)
+    db.commit()
+    db.close()
+
+
+# =========================
+# helpers
+# =========================
+def money_kzt(n: int) -> str:
+    return f"{n:,}".replace(",", " ") + " ₸"
+
+
+def get_perfume_by_id(pid: str):
+    for p in PERFUMES:
+        if p["id"] == pid:
+            return p
+    return None
+
+
+def get_cart() -> dict:
+    return session.get("cart", {})
+
+
+def save_cart(cart: dict):
+    session["cart"] = cart
+
+
+def cart_count(cart: dict) -> int:
+    return sum(cart.values())
+
+
+def build_cart_items(cart: dict):
+    items = []
+    total = 0
+
+    for pid, qty in cart.items():
+        p = get_perfume_by_id(pid)
+        if not p:
+            continue
+
+        line_total = p["price"] * qty
+        total += line_total
+
+        items.append({
+            "id": pid,
+            "name": p["name"],
+            "price": p["price"],
+            "qty": qty,
+            "price_str": money_kzt(p["price"]),
+            "line_total": line_total,
+            "line_total_str": money_kzt(line_total),
+        })
+
+    return items, total
+
+
+# =========================
+# admin auth
+# =========================
+def admin_required(view_func):
+    @wraps(view_func)
+    def wrapper(*args, **kwargs):
+        if not session.get("is_admin"):
+            return redirect(url_for("admin_login"))
+        return view_func(*args, **kwargs)
+    return wrapper
+
+
+@app.get("/admin")
+def admin_login():
+    return render_template("admin_login.html", error=None, cart_count=cart_count(get_cart()))
+
+
+@app.post("/admin")
+def admin_login_post():
+    password = request.form.get("password", "")
+    if password == ADMIN_PASSWORD:
+        session["is_admin"] = True
+        return redirect(url_for("orders_page"))
+    return render_template("admin_login.html", error="Неверный пароль 😅", cart_count=cart_count(get_cart()))
+
+
+@app.get("/admin/logout")
+def admin_logout():
+    session.pop("is_admin", None)
+    return redirect(url_for("home"))
+
+
+# =========================
+# routes
+# =========================
+@app.get("/")
+def home():
+    cart = get_cart()
+    return render_template(
+        "index.html",
+        perfumes=PERFUMES,
+        money_kzt=money_kzt,
+        cart_count=cart_count(cart),
+    )
+
+
+@app.get("/cart")
+def cart_page():
+    cart = get_cart()
+    items, total = build_cart_items(cart)
+    return render_template(
+        "cart.html",
+        items=items,
+        total=total,
+        total_str=money_kzt(total),
+        cart_count=cart_count(cart),
+    )
+
+
+@app.post("/add-to-cart")
+def add_to_cart():
+    pid = request.form.get("perfume_id")
+    cart = get_cart()
+    if pid:
+        cart[pid] = cart.get(pid, 0) + 1
+        save_cart(cart)
+    return redirect(url_for("home"))
+
+
+@app.post("/cart/inc")
+def cart_inc():
+    pid = request.form.get("pid")
+    cart = get_cart()
+    if pid in cart:
+        cart[pid] += 1
+        save_cart(cart)
+    return redirect(url_for("cart_page"))
+
+
+@app.post("/cart/dec")
+def cart_dec():
+    pid = request.form.get("pid")
+    cart = get_cart()
+    if pid in cart:
+        cart[pid] -= 1
+        if cart[pid] <= 0:
+            cart.pop(pid, None)
+        save_cart(cart)
+    return redirect(url_for("cart_page"))
+
+
+@app.post("/cart/remove")
+def cart_remove():
+    pid = request.form.get("pid")
+    cart = get_cart()
+    cart.pop(pid, None)
+    save_cart(cart)
+    return redirect(url_for("cart_page"))
+
+
+@app.post("/clear-cart")
+def clear_cart():
+    session.pop("cart", None)
+    return redirect(url_for("cart_page"))
+
+
+@app.get("/order")
+def order_page():
+    cart = get_cart()
+    items, total = build_cart_items(cart)
+    if not items:
+        return redirect(url_for("cart_page"))
+
+    return render_template(
+        "order.html",
+        items=items,
+        total_str=money_kzt(total),
+        cart_count=cart_count(cart),
+    )
+
+
+@app.post("/checkout")
+def checkout():
+    customer = request.form.get("customer", "").strip()
+    phone = request.form.get("phone", "").strip()
+    address = request.form.get("address", "").strip()
+
+    cart = get_cart()
+    items, total = build_cart_items(cart)
+
+    if not items:
+        return redirect(url_for("cart_page"))
+
+    if not customer or not phone or not address:
+        return "Заполни все поля 😅", 400
+
+    items_for_db = [
+        {"name": it["name"], "price": it["price"], "qty": it["qty"], "line_total": it["line_total"]}
+        for it in items
+    ]
+
+    db = get_db()
+    cur = db.cursor()
+    created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cur.execute(
+        "INSERT INTO orders (customer, phone, address, items, total, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+        (customer, phone, address, json.dumps(items_for_db, ensure_ascii=False), total, created_at)
+    )
+    db.commit()
+    order_id = cur.lastrowid
+    db.close()
+
+    session.pop("cart", None)
+
+    return render_template("success.html", order_id=order_id)
+
+
+@app.get("/orders")
+@admin_required
+def orders_page():
+    db = get_db()
+    rows = db.execute(
+        "SELECT id, customer, phone, address, items, total, created_at FROM orders ORDER BY id DESC"
+    ).fetchall()
+    db.close()
+
+    orders = []
+    for r in rows:
+        orders.append({
+            "id": r["id"],
+            "customer": r["customer"],
+            "phone": r["phone"],
+            "address": r["address"],
+            "items": json.loads(r["items"]),
+            "total_str": money_kzt(r["total"]),
+            "created_at": r["created_at"],
+        })
+
+    return render_template(
+        "orders.html",
+        orders=orders,
+        cart_count=cart_count(get_cart()),
+    )
+
+
+init_db()
+
+if __name__ == "__main__":
+    app.run(debug=True)
